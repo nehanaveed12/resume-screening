@@ -1,0 +1,80 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume Screening Advanced</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body {background: linear-gradient(to right, #f8f9fa, #e9ecef);}
+.card {border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
+.progress {height: 15px;}
+.badge {margin: 2px;}
+</style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-primary">
+<div class="container"><a class="navbar-brand" href="#">Resume Screener Pro</a></div>
+</nav>
+<div class="container py-4">
+<div class="row">
+<div class="col-md-4">
+<div class="card p-3 mb-3">
+<h5>Upload Resume</h5>
+<form id="uploadForm">
+<input type="file" class="form-control mb-2" id="resumeFile" name="resume_file">
+<textarea class="form-control mb-2" id="resumeText" rows="5" placeholder="Or paste resume text"></textarea>
+<input type="number" class="form-control mb-2" id="topK" value="5">
+<button class="btn btn-primary w-100">Match Resume → Jobs</button>
+</form>
+</div>
+<div class="card p-3">
+<h5>Job Description</h5>
+<textarea class="form-control mb-2" id="jobText" rows="6" placeholder="Paste job description"></textarea>
+<button id="matchJob" class="btn btn-success w-100">Match Job → Resumes</button>
+</div>
+</div>
+<div class="col-md-8">
+<div class="card p-3" id="results">
+<h5>Results</h5>
+<div id="resultsList"></div>
+</div>
+</div>
+</div>
+</div>
+<script>
+async function postForm(formData){
+const res=await fetch('/api/match',{method:'POST',body:formData});
+return res.json();
+}
+document.getElementById('uploadForm').addEventListener('submit',async(e)=>{
+e.preventDefault();
+const f=document.getElementById('resumeFile').files[0];
+const txt=document.getElementById('resumeText').value;
+const topK=document.getElementById('topK').value;
+const form=new FormData();
+form.append('top_k',topK);
+if(f)form.append('resume_file',f);else form.append('resume_text',txt);
+const data=await postForm(form);renderResults(data);
+});
+document.getElementById('matchJob').addEventListener('click',async()=>{
+const jobText=document.getElementById('jobText').value;
+const form=new FormData();form.append('job_text',jobText);
+const data=await postForm(form);renderResults(data);
+});
+function renderResults(data){
+const container=document.getElementById('resultsList');container.innerHTML='';
+if(data.error){container.innerHTML=`<div class='alert alert-danger'>${data.error}</div>`;return;}
+data.results.forEach(r=>{
+const card=document.createElement('div');
+card.className='mb-3 p-3 border rounded bg-white';
+const scoreBar=`<div class='progress mb-2'><div class='progress-bar bg-success' style='width:${(r.score*100).toFixed(1)}%'></div></div>`;
+const skills=(r.skills&&r.skills.length>0)?r.skills.map(s=>`<span class='badge bg-info text-dark'>${s}</span>`).join(''):'<span class="text-muted">No skills detected</span>';
+card.innerHTML=`<h6>${r.title} - ${(r.score*100).toFixed(1)}%</h6>${scoreBar}<p>${r.excerpt}</p><div>${skills}</div>`;
+container.appendChild(card);
+});
+}
+</script>
+</body>
+</html>
